@@ -1,0 +1,14 @@
+services:
+  ragpi:
+    build: .
+    container_name: ragpi
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./data/raw:/data/raw
+      - ./data/chroma:/data/chroma
+      - ./data/hf_cache:/data/hf_cache
+    command: ["uvicorn","app.main:app","--host","0.0.0.0","--port","8000","--workers","1"]
+    restart: unless-stopped
