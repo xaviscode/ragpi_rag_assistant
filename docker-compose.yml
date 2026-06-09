@@ -10,5 +10,6 @@ services:
       - ./data/raw:/data/raw
       - ./data/chroma:/data/chroma
       - ./data/hf_cache:/data/hf_cache
+      - ./data/metadata:/data/metadata
     command: ["uvicorn","app.main:app","--host","0.0.0.0","--port","8000","--workers","1"]
     restart: unless-stopped
