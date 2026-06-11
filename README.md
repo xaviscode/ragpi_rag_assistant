@@ -718,6 +718,12 @@ If exposing the API beyond localhost:
 
 ---
 
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+---
+
 ## Credits
 
 This project was created as a practical local RAG assistant for working with personal and academic documents. It was especially useful for exploring large, dense, and technical files by making it easier to ask grounded questions, retrieve relevant evidence, and study complex material more efficiently.
