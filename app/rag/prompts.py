@@ -1,17 +1,22 @@
-def build_prompt_parts(evidence_text: str, question: str):
-    question_prompt = f"""You are a helpful assistant.
+from __future__ import annotations
 
-RULES:
-- You must answer using ONLY the EVIDENCE lines provided.
-- If the answer is not in the context, say: "I don't know based on the provided documents."
-- Match the user's intent:
-  * If the user asks for a name, ID, date, or single fact: answer in ONE line.
-  * If the user asks to summarize/explain/overview: write a detailed summary (6-12 sentences), grouped in paragraphs or bullets.
-  * If the user asks for steps: return a numbered list.
-- Do not be overly brief unless the question clearly requires it.
 
-Question: {question}
+def build_prompt_parts(evidence_text: str, question: str) -> tuple[str, str]:
+    system_prompt = """You are a document-grounded assistant.
 
-EVIDENCE:
+Rules:
+- Answer only using the provided evidence.
+- If the evidence is insufficient, say: "I don't know based on the provided documents."
+- Do not use outside knowledge.
+- Be concise and factual.
+- When useful, mention the source document names.
 """
-    return question_prompt, evidence_text
+    user_prompt = f"""Evidence:
+{evidence_text}
+
+Question:
+{question}
+
+Answer:
+"""
+    return system_prompt, user_prompt

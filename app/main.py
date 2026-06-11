@@ -1,16 +1,22 @@
+from __future__ import annotations
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from app.api.routes import router
 
-app = FastAPI(title="RAGPi Local RAG Assistant", version="0.3.0")
+app = FastAPI(
+    title="RagPi RAG Assistant",
+    description="Local document-grounded RAG assistant using FastAPI, ChromaDB and Ollama.",
+    version="0.7.0",
+)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Routes
 app.include_router(router)

@@ -1,53 +1,40 @@
 from __future__ import annotations
 
-import os
 import requests
-
-IDK = "I don't know based on the provided documents."
 
 
 class LocalLLM:
-    """
-    Ollama backend (runs outside Docker).
-    Uses /api/generate (non-streaming).
-    """
+    def __init__(self, model_name: str, base_url: str, timeout: int = 120, keep_alive: str = "10m"):
+        self.model_name = model_name
+        self.base_url = base_url.rstrip("/")
+        self.timeout = timeout
+        self.keep_alive = keep_alive
 
-    def __init__(self, model_name: str, hf_home: str):
-        self.model = model_name
-        self.base_url = os.getenv("OLLAMA_BASE_URL", "http://host.docker.internal:11434").rstrip("/")
-        self.timeout = float(os.getenv("OLLAMA_TIMEOUT", "180"))
-
-        try:
-            r = requests.get(f"{self.base_url}/api/tags", timeout=5)
-            r.raise_for_status()
-        except Exception as e:
-            raise RuntimeError(
-                f"Cannot reach Ollama at {self.base_url}. "
-                f"Is 'ollama serve' running on the host? Original error: {e}"
-            )
-
-    def generate(self, question_prompt: str, context: str, max_new_tokens: int = 450, temperature: float = 0.0) -> str:
-        prompt = (
-            "You are a careful RAG assistant.\n"
-            "Use ONLY the provided context.\n"
-            f"If the answer is not in the context, say: \"{IDK}\".\n\n"
-            f"{question_prompt.strip()}\n\n"
-            "Context:\n"
-            f"{context.strip()}\n\n"
-            "Answer:"
-        )
-
+    def generate(self, system_prompt: str, user_prompt: str, max_new_tokens: int, temperature: float) -> str:
+        url = f"{self.base_url}/api/generate"
+        prompt = f"{system_prompt.strip()}\n\n{user_prompt.strip()}"
         payload = {
-            "model": self.model,
+            "model": self.model_name,
             "prompt": prompt,
             "stream": False,
-            "options": {
-                "temperature": float(temperature),
-                "num_predict": int(max_new_tokens),
-            },
+            "keep_alive": self.keep_alive,
+            "options": {"temperature": temperature, "num_predict": max_new_tokens},
         }
-
-        r = requests.post(f"{self.base_url}/api/generate", json=payload, timeout=self.timeout)
-        r.raise_for_status()
+        r = requests.post(url, json=payload, timeout=self.timeout)
+        if not r.ok:
+            print("OLLAMA ERROR STATUS:", r.status_code)
+            print("OLLAMA ERROR BODY:", r.text[:4000])
+            r.raise_for_status()
         data = r.json()
-        return (data.get("response") or "").strip()
+        response = (data.get("response") or "").strip()
+        if not response:
+            print("OLLAMA EMPTY RESPONSE:", data)
+        return response
+
+    def generate_simple(self, prompt: str, max_new_tokens: int = 120, temperature: float = 0.1) -> str:
+        return self.generate(
+            system_prompt="You are a concise assistant.",
+            user_prompt=prompt,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+        )

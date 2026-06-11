@@ -1,9 +1,8 @@
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
-.venv/
 .env
-data/chroma/
-data/hf_cache/
-*.log
+data/raw/*
+data/chroma/*
+data/metadata/*
+data/hf_cache/*
+!.gitkeep

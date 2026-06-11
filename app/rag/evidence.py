@@ -1,70 +1,77 @@
 from __future__ import annotations
+
 import re
-from typing import Any, Dict, List
+from typing import Any, Callable
 
-_SENT_SPLIT = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9\[])")
 
-def _split_sentences(text: str) -> List[str]:
-    text = re.sub(r"\s+", " ", (text or "")).strip()
-    if not text:
-        return []
-    if sum(text.count(p) for p in ".!?") == 0:
-        return [text]
-    sents = _SENT_SPLIT.split(text)
-    out = []
-    for s in sents:
-        s = s.strip()
-        if len(s) < 20:
-            continue
-        out.append(s)
-    return out or [text]
+def _split_sentences(text: str) -> list[str]:
+    parts = re.split(r"(?<=[.!?])\s+|\n+", text)
+    cleaned = []
+    for p in parts:
+        p = re.sub(r"\s+", " ", p).strip()
+        if len(p) >= 40:
+            cleaned.append(p)
+    return cleaned
+
+
+def _dot(a: list[float], b: list[float]) -> float:
+    return sum(x * y for x, y in zip(a, b))
+
 
 def select_evidence(
     question: str,
-    retrieved_items: List[Dict[str, Any]],
-    embed_query_fn,
-    embed_texts_fn,
+    retrieved_items: list[dict[str, Any]],
+    embed_query_fn: Callable[[str], list[float]],
+    embed_texts_fn: Callable[[list[str]], list[list[float]]],
     max_evidence: int = 10,
-    max_total_chars: int = 3200,
-) -> Dict[str, Any]:
-    candidates: List[Dict[str, Any]] = []
-    for it in retrieved_items:
-        for sent in _split_sentences(it.get("text", "")):
-            candidates.append({
-                "source": it.get("source", "unknown"),
-                "chunk_id": it.get("chunk_id", ""),
-                "quote": sent,
-            })
+    max_total_chars: int = 3800,
+) -> dict[str, Any]:
+    candidates: list[dict[str, Any]] = []
+
+    for item in retrieved_items:
+        text = item.get("text") or ""
+        sentences = _split_sentences(text)
+        if not sentences and text.strip():
+            sentences = [text.strip()[:600]]
+        for sentence in sentences:
+            candidates.append(
+                {
+                    "source": item.get("source", "unknown"),
+                    "chunk_id": item.get("chunk_id", ""),
+                    "quote": sentence,
+                }
+            )
 
     if not candidates:
         return {"evidence": [], "evidence_text": ""}
 
+    candidates = candidates[:80]
     qemb = embed_query_fn(question)
-    texts = [c["quote"] for c in candidates]
-    embs = embed_texts_fn(texts)
+    embs = embed_texts_fn([c["quote"] for c in candidates])
+    scored = sorted(
+        [(_dot(qemb, emb), cand) for cand, emb in zip(candidates, embs)],
+        key=lambda x: x[0],
+        reverse=True,
+    )
 
-    scored = []
-    for c, e in zip(candidates, embs):
-        score = sum(a*b for a, b in zip(qemb, e))
-        scored.append((score, c))
-    scored.sort(key=lambda x: x[0], reverse=True)
-
-    seen = set()
     evidence = []
-    total = 0
-    for score, c in scored:
-        q = c["quote"].strip()
-        if q in seen:
+    seen = set()
+    total_chars = 0
+
+    for _, cand in scored:
+        key = (cand["source"], cand["quote"][:120])
+        if key in seen:
             continue
-        seen.add(q)
-        if len(q) > 520:
-            q = q[:520].rstrip() + "…"
-        if total + len(q) + 40 > max_total_chars:
-            continue
-        evidence.append({"source": c["source"], "chunk_id": c["chunk_id"], "quote": q})
-        total += len(q) + 1
+        if total_chars + len(cand["quote"]) > max_total_chars:
+            break
+        evidence.append(cand)
+        seen.add(key)
+        total_chars += len(cand["quote"])
         if len(evidence) >= max_evidence:
             break
 
-    lines = [f"[{i}] ({ev['source']}) \"{ev['quote']}\"" for i, ev in enumerate(evidence, 1)]
-    return {"evidence": evidence, "evidence_text": "\n".join(lines)}
+    lines = [
+        f"[{i}] Source: {ev['source']} | Chunk: {ev['chunk_id']}\n{ev['quote']}"
+        for i, ev in enumerate(evidence, start=1)
+    ]
+    return {"evidence": evidence, "evidence_text": "\n\n".join(lines)}
