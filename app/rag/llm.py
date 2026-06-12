@@ -12,13 +12,16 @@ class LocalLLM:
 
     def generate(self, system_prompt: str, user_prompt: str, max_new_tokens: int, temperature: float) -> str:
         url = f"{self.base_url}/api/generate"
-        prompt = f"{system_prompt.strip()}\n\n{user_prompt.strip()}"
         payload = {
             "model": self.model_name,
-            "prompt": prompt,
+            "system": system_prompt.strip(),
+            "prompt": user_prompt.strip(),
             "stream": False,
             "keep_alive": self.keep_alive,
-            "options": {"temperature": temperature, "num_predict": max_new_tokens},
+            "options": {
+                "temperature": temperature,
+                "num_predict": max_new_tokens,
+            },
         }
         r = requests.post(url, json=payload, timeout=self.timeout)
         if not r.ok:
