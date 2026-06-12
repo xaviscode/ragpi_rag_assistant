@@ -1,0 +1,548 @@
+[
+  {
+    "id": "thesis_title",
+    "category": "document_identity",
+    "question": "According to the title page, what is the full title of the thesis?",
+    "return_sources": true,
+    "return_evidence": true,
+    "must_refuse": false,
+    "expected_answer_contains_any": [
+      "Financial Crisis Index for Systemic Risk Monitoring",
+      "Financial Crisis Index",
+      "Systemic Risk Monitoring"
+    ],
+    "expected_source_contains_any": [
+      "FCI_Thesis",
+      "Thesis"
+    ],
+    "expected_evidence_contains_any": [
+      "Financial Crisis Index for Systemic Risk Monitoring",
+      "Financial Crisis Index",
+      "Systemic Risk Monitoring"
+    ],
+    "must_have_sources": true,
+    "must_have_evidence": true,
+    "notes": "Basic title-page retrieval test. Partial title is acceptable because PDF extraction may split the title."
+  },
+  {
+    "id": "thesis_author",
+    "category": "document_identity",
+    "question": "According to the title page, what is the full name of the thesis author?",
+    "return_sources": true,
+    "return_evidence": true,
+    "must_refuse": false,
+    "expected_answer_contains_any": [
+      "Xavier Rubio Toledano",
+      "Rubio Toledano"
+    ],
+    "expected_evidence_contains_any": [
+      "Xavier Rubio Toledano",
+      "Rubio Toledano",
+      "Name"
+    ],
+    "must_have_sources": true,
+    "must_have_evidence": true,
+    "notes": "Checks author extraction. Full name is ideal, but surname-only extraction is accepted as partial pass because the title page can be fragmented by PDF parsing."
+  },
+  {
+    "id": "thesis_supervisor",
+    "category": "document_identity",
+    "question": "Who supervised the thesis?",
+    "return_sources": true,
+    "return_evidence": true,
+    "must_refuse": false,
+    "expected_answer_contains": [
+      "Jonatan Martin Rodriguez"
+    ],
+    "expected_evidence_contains_any": [
+      "Supervisor : Jonatan Martin Rodriguez",
+      "Jonatan Martin Rodriguez"
+    ],
+    "must_have_sources": true,
+    "must_have_evidence": true,
+    "notes": "Checks extraction of supervisor information."
+  },
+  {
+    "id": "thesis_main_objective",
+    "category": "objective_and_scope",
+    "question": "According to the introduction, what is the general objective of the thesis project?",
+    "return_sources": true,
+    "return_evidence": true,
+    "must_refuse": false,
+    "expected_answer_contains_any": [
+      "Financial Crisis Index",
+      "systemic financial stress",
+      "systemic risk",
+      "monitor",
+      "monitoring framework",
+      "interpretable monitoring framework"
+    ],
+    "expected_evidence_contains_any": [
+      "general objective",
+      "develop a Financial Crisis Index",
+      "systemic financial stress",
+      "monitoring framework",
+      "interpretable monitoring framework"
+    ],
+    "must_have_sources": true,
+    "must_have_evidence": true,
+    "notes": "Tests whether the assistant retrieves the main objective rather than only the validation objective."
+  },
+  {
+    "id": "pilot_countries",
+    "category": "objective_and_scope",
+    "question": "Which four pilot countries are covered in the thesis?",
+    "return_sources": true,
+    "return_evidence": true,
+    "must_refuse": false,
+    "expected_answer_contains": [
+      "United States",
+      "Germany",
+      "Spain",
+      "United Kingdom"
+    ],
+    "expected_evidence_contains_any": [
+      "United States, Germany, Spain and the United Kingdom",
+      "US, DE, ES, UK"
+    ],
+    "must_have_sources": true,
+    "must_have_evidence": true,
+    "notes": "Checks list extraction and country coverage."
+  },
+  {
+    "id": "research_problem",
+    "category": "objective_and_scope",
+    "question": "What research problem is explicitly stated in section 1.2 of the thesis?",
+    "return_sources": true,
+    "return_evidence": true,
+    "must_refuse": false,
+    "expected_answer_contains_any": [
+      "open macro-financial",
+      "market-based",
+      "uncertainty data",
+      "reproducible",
+      "interpretable index",
+      "monitoring systemic financial stress"
+    ],
+    "expected_evidence_contains_any": [
+      "How can open macro-financial",
+      "combined into a reproducible and interpretable index",
+      "research problem"
+    ],
+    "must_have_sources": true,
+    "must_have_evidence": true,
+    "notes": "More explicit wording helps retrieval target section 1.2 instead of the conceptual-gap section."
+  },
+  {
+    "id": "indicator_blocks",
+    "category": "data_and_indicators",
+    "question": "What are the four conceptual indicator blocks used in the thesis?",
+    "return_sources": true,
+    "return_evidence": true,
+    "must_refuse": false,
+    "expected_answer_contains": [
+      "market stress",
+      "credit and leverage",
+      "macro vulnerability",
+      "uncertainty"
+    ],
+    "expected_evidence_contains_any": [
+      "Market stress",
+      "Credit and leverage",
+      "Macro vulnerability",
+      "Uncertainty"
+    ],
+    "must_have_sources": true,
+    "must_have_evidence": true,
+    "notes": "Tests structured list extraction from the indicator design section."
+  },
+  {
+    "id": "selected_indicators",
+    "category": "data_and_indicators",
+    "question": "According to Table 3-1, what indicator codes are used in the Financial Crisis Index framework?",
+    "return_sources": true,
+    "return_evidence": true,
+    "must_refuse": false,
+    "expected_answer_contains_any": [
+      "TS_SLOPE",
+      "VIX_EQ",
+      "CS_CORP",
+      "LIQ_SPREAD",
+      "C2GDP_GAP",
+      "CREDIT_GROWTH",
+      "DSR",
+      "HPI_GROWTH",
+      "GDP_GROWTH",
+      "UNEMP",
+      "CPI_INFL",
+      "EPU",
+      "credit-to-GDP gap",
+      "debt-service ratio",
+      "economic policy uncertainty"
+    ],
+    "expected_evidence_contains_any": [
+      "Table 3-1",
+      "Final indicator design",
+      "VIX_EQ",
+      "C2GDP_GAP",
+      "EPU",
+      "credit-to-GDP gap",
+      "debt-service ratio"
+    ],
+    "must_have_sources": true,
+    "must_have_evidence": true,
+    "notes": "Table-retrieval test. Accepts either indicator codes or their natural-language labels."
+  },
+  {
+    "id": "data_providers",
+    "category": "data_and_indicators",
+    "question": "Which data providers are used in the project?",
+    "return_sources": true,
+    "return_evidence": true,
+    "must_refuse": false,
+    "expected_answer_contains_any": [
+      "FRED",
+      "BIS",
+      "Economic Policy Uncertainty",
+      "EPU"
+    ],
+    "expected_evidence_contains_any": [
+      "FRED",
+      "BIS Data Portal",
+      "Economic Policy Uncertainty"
+    ],
+    "must_have_sources": true,
+    "must_have_evidence": true,
+    "notes": "Checks source/provider extraction."
+  },
+  {
+    "id": "wp2_successful_combinations",
+    "category": "numeric_fact_extraction",
+    "question": "How many indicator-country combinations were successfully retrieved and processed in WP2?",
+    "return_sources": true,
+    "return_evidence": true,
+    "must_refuse": false,
+    "expected_answer_contains": [
+      "48"
+    ],
+    "expected_evidence_contains_any": [
+      "48 successful indicator-country combinations",
+      "Successful combinations 48"
+    ],
+    "must_have_sources": true,
+    "must_have_evidence": true,
+    "notes": "Numeric extraction from WP2 results."
+  },
+  {
+    "id": "wp2_panel_sizes",
+    "category": "numeric_fact_extraction",
+    "question": "How many observations are in the long-format panel and how many country-date rows are in the wide-format panel?",
+    "return_sources": true,
+    "return_evidence": true,
+    "must_refuse": false,
+    "expected_answer_contains": [
+      "27,071",
+      "3,493"
+    ],
+    "expected_evidence_contains_any": [
+      "Long-format observations 27,071",
+      "Wide-format country-date rows 3,493",
+      "27,071 observations",
+      "3,493 country-date rows"
+    ],
+    "must_have_sources": true,
+    "must_have_evidence": true,
+    "notes": "Tests table and numeric extraction from Chapter 6."
+  },
+  {
+    "id": "two_indices",
+    "category": "methodology",
+    "question": "What two Financial Crisis Index constructions are compared in the thesis?",
+    "return_sources": true,
+    "return_evidence": true,
+    "must_refuse": false,
+    "expected_answer_contains_any": [
+      "equal-weight",
+      "PCA-based",
+      "FCI_EW",
+      "FCI_PCA"
+    ],
+    "expected_evidence_contains_any": [
+      "equal-weight Financial Crisis Index",
+      "PCA-based Financial Crisis Index",
+      "FCI"
+    ],
+    "must_have_sources": true,
+    "must_have_evidence": true,
+    "notes": "Tests methodology retrieval."
+  },
+  {
+    "id": "equal_weight_vs_pca",
+    "category": "methodology",
+    "question": "How does the equal-weight index differ from the PCA-based index?",
+    "return_sources": true,
+    "return_evidence": true,
+    "must_refuse": false,
+    "expected_answer_contains_any": [
+      "equal-weight",
+      "smooth",
+      "long-run",
+      "PCA",
+      "crisis-sensitive",
+      "acute stress"
+    ],
+    "expected_evidence_contains_any": [
+      "equal-weight index provides broad systemic-risk monitoring",
+      "PCA-based index is more crisis-sensitive",
+      "equal-weight index is smoother",
+      "PCA-based index reacts more sharply"
+    ],
+    "must_have_sources": true,
+    "must_have_evidence": true,
+    "notes": "Core conceptual comparison test."
+  },
+  {
+    "id": "pca_strongest_loadings",
+    "category": "results",
+    "question": "Which indicators have the strongest average PCA loadings according to the thesis?",
+    "return_sources": true,
+    "return_evidence": true,
+    "must_refuse": false,
+    "expected_answer_contains_any": [
+      "CS_CORP",
+      "VIX_EQ",
+      "C2GDP_GAP",
+      "DSR",
+      "LIQ_SPREAD"
+    ],
+    "expected_evidence_contains_any": [
+      "CS_CORP",
+      "VIX_EQ",
+      "C2GDP_GAP",
+      "DSR",
+      "LIQ_SPREAD"
+    ],
+    "must_have_sources": true,
+    "must_have_evidence": true,
+    "notes": "Tests retrieval from Table 6-2."
+  },
+  {
+    "id": "global_financial_crisis_result",
+    "category": "results",
+    "question": "Which historical episode appears as the clearest common systemic stress episode in the thesis?",
+    "return_sources": true,
+    "return_evidence": true,
+    "must_refuse": false,
+    "expected_answer_contains_any": [
+      "Global Financial Crisis"
+    ],
+    "expected_evidence_contains_any": [
+      "Global Financial Crisis",
+      "clearest common systemic stress episode"
+    ],
+    "must_have_sources": true,
+    "must_have_evidence": true,
+    "notes": "Checks high-level empirical conclusion."
+  },
+  {
+    "id": "top_stress_episode_by_country",
+    "category": "results",
+    "question": "According to the episode-level validation, what is the top stress episode by country and index construction?",
+    "return_sources": true,
+    "return_evidence": true,
+    "must_refuse": false,
+    "expected_answer_contains_any": [
+      "COVID-19 shock",
+      "Dot-com bust",
+      "Global Financial Crisis",
+      "Germany",
+      "Spain",
+      "United Kingdom",
+      "United States"
+    ],
+    "expected_evidence_contains_any": [
+      "Table 7-3",
+      "COVID-19 shock",
+      "Dot-com bust",
+      "Global Financial Crisis"
+    ],
+    "must_have_sources": true,
+    "must_have_evidence": true,
+    "notes": "More demanding table-style result test."
+  },
+  {
+    "id": "historical_coverage",
+    "category": "results",
+    "question": "What is the main difference in historical coverage between the equal-weight index and the PCA-based index?",
+    "return_sources": true,
+    "return_evidence": true,
+    "must_refuse": false,
+    "expected_answer_contains_any": [
+      "equal-weight",
+      "longer historical",
+      "PCA",
+      "shorter",
+      "complete common indicator matrix"
+    ],
+    "expected_evidence_contains_any": [
+      "equal-weight index has a much longer historical span",
+      "PCA-based index has a shorter history",
+      "complete common indicator matrix"
+    ],
+    "must_have_sources": true,
+    "must_have_evidence": true,
+    "notes": "Tests explanation of coverage differences."
+  },
+  {
+    "id": "strict_common_sample",
+    "category": "methodology",
+    "question": "What strict common sample periods are mentioned in section 3.7 for the pilot countries?",
+    "return_sources": true,
+    "return_evidence": true,
+    "must_refuse": false,
+    "expected_answer_contains_any": [
+      "1999-01",
+      "2022-01",
+      "2001-01",
+      "United States",
+      "Germany",
+      "United Kingdom",
+      "Spain",
+      "strict common sample"
+    ],
+    "expected_evidence_contains_any": [
+      "strict common sample",
+      "1999-01 to 2022-01",
+      "2001-01 to 2022-01"
+    ],
+    "must_have_sources": true,
+    "must_have_evidence": true,
+    "notes": "This was the slowest failed case. The wording now explicitly points to section 3.7."
+  },
+  {
+    "id": "validation_windows",
+    "category": "validation",
+    "question": "Which narrative stress windows are used in the validation stage?",
+    "return_sources": true,
+    "return_evidence": true,
+    "must_refuse": false,
+    "expected_answer_contains_any": [
+      "Dot-com bust",
+      "Global Financial Crisis",
+      "Euro-area sovereign stress",
+      "China",
+      "COVID-19",
+      "Inflation"
+    ],
+    "expected_evidence_contains_any": [
+      "Dot-com bust",
+      "Global Financial Crisis",
+      "Euro-area sovereign stress",
+      "COVID-19 shock",
+      "Inflation"
+    ],
+    "must_have_sources": true,
+    "must_have_evidence": true,
+    "notes": "Checks retrieval from the validation strategy section."
+  },
+  {
+    "id": "monitoring_not_prediction",
+    "category": "limitations",
+    "question": "According to the thesis, should the Financial Crisis Index be interpreted as a crisis prediction model or as a monitoring tool?",
+    "return_sources": true,
+    "return_evidence": true,
+    "must_refuse": false,
+    "expected_answer_contains_any": [
+      "does not claim",
+      "not",
+      "prediction",
+      "forecasting",
+      "monitoring",
+      "descriptive validation",
+      "does not establish formal crisis-prediction performance"
+    ],
+    "expected_evidence_contains_any": [
+      "does not claim",
+      "monitoring",
+      "not intended to prove formal forecasting ability",
+      "descriptive validation",
+      "does not establish formal crisis-prediction performance"
+    ],
+    "must_have_sources": true,
+    "must_have_evidence": true,
+    "notes": "The previous answer was correct, but the evidence check was too strict. This version accepts equivalent thesis wording."
+  },
+  {
+    "id": "future_work",
+    "category": "limitations",
+    "question": "What future work is suggested by the thesis?",
+    "return_sources": true,
+    "return_evidence": true,
+    "must_refuse": false,
+    "expected_answer_contains_any": [
+      "future work",
+      "early-warning",
+      "forecasting",
+      "additional countries",
+      "formal"
+    ],
+    "expected_evidence_contains_any": [
+      "future work",
+      "extended in future work",
+      "formal early-warning analysis",
+      "forecasting"
+    ],
+    "must_have_sources": true,
+    "must_have_evidence": true,
+    "notes": "Tests retrieval from limitations/conclusion/future-work sections. This may vary depending on chunking."
+  },
+  {
+    "id": "unsupported_question_refusal",
+    "category": "grounded_refusal",
+    "question": "What was the author's final thesis grade?",
+    "return_sources": true,
+    "return_evidence": true,
+    "must_refuse": true,
+    "expected_answer_contains_any": [
+      "I don't know based on the provided documents",
+      "not provided",
+      "not mentioned"
+    ],
+    "must_have_sources": false,
+    "must_have_evidence": false,
+    "notes": "The uploaded thesis does not state the final grade. The model should refuse or say it is not provided."
+  },
+  {
+    "id": "unsupported_personal_question_refusal",
+    "category": "grounded_refusal",
+    "question": "What job did the author get after finishing the thesis?",
+    "return_sources": true,
+    "return_evidence": true,
+    "must_refuse": true,
+    "expected_answer_contains_any": [
+      "I don't know based on the provided documents",
+      "not provided",
+      "not mentioned"
+    ],
+    "must_have_sources": false,
+    "must_have_evidence": false,
+    "notes": "Checks that the model does not infer unsupported personal outcomes."
+  },
+  {
+    "id": "answer_not_empty_thesis",
+    "category": "generation_robustness",
+    "question": "Answer briefly: what is the thesis about?",
+    "return_sources": true,
+    "return_evidence": true,
+    "must_refuse": false,
+    "answer_must_not_be_empty": true,
+    "expected_answer_contains_any": [
+      "Financial Crisis Index",
+      "systemic risk",
+      "financial stress"
+    ],
+    "must_have_sources": true,
+    "must_have_evidence": true,
+    "notes": "General stress test to ensure the model returns a non-empty thesis summary."
+  }
+]

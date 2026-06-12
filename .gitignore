@@ -6,3 +6,5 @@ data/chroma/*
 data/metadata/*
 data/hf_cache/*
 !.gitkeep
+tmp_test_data/
+.pytest_cache/
