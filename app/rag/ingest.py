@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Any
 from app.rag.config import Settings
-from app.rag.document_store import DocumentStore
+from app.rag.document_store import DocumentStore, sha256_file
 from app.rag.embeddings import Embedder
 from app.rag.utils import chunk_text, clean_text, list_files, read_text
 from app.rag.vector_store import VectorStore
@@ -34,7 +34,20 @@ def ingest_folder(settings: Settings, store: VectorStore, embedder: Embedder, do
             doc = document_store.get_by_path(path) or document_store.register_existing_file(path)
             document_id = doc["document_id"]
 
-            if doc.get("status") == "indexed" and doc.get("chunks_count", 0) > 0:
+            current_hash = sha256_file(path)
+            stored_hash = doc.get("content_hash")
+
+            file_changed = bool(stored_hash and current_hash != stored_hash)
+
+            if file_changed:
+                document_store.update_file_hash(
+                    document_id=document_id,
+                    content_hash=current_hash,
+                    file_size_bytes=os.path.getsize(path),
+                )
+                store.delete_by_document_id(document_id)
+
+            if doc.get("status") == "indexed" and doc.get("chunks_count", 0) > 0 and not file_changed:
                 files_skipped += 1
                 results.append({"document_id": document_id, "source": doc.get("original_filename"), "status": "skipped", "reason": "already_indexed", "chunks_count": doc.get("chunks_count", 0)})
                 continue

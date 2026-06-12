@@ -9,9 +9,22 @@ def _split_sentences(text: str) -> list[str]:
     cleaned = []
     for p in parts:
         p = re.sub(r"\s+", " ", p).strip()
-        if len(p) >= 40:
+        if _is_useful_short_evidence(p):
             cleaned.append(p)
     return cleaned
+
+
+def _is_useful_short_evidence(text: str) -> bool:
+    text = text.strip()
+    if not text:
+        return False
+    if re.search(r"\d", text):
+        return True
+    if re.search(r"[@€$£%]", text):
+        return True
+    if 10 <= len(text) < 40 and len(text.split()) >= 2:
+        return True
+    return len(text) >= 40
 
 
 def _dot(a: list[float], b: list[float]) -> float:
