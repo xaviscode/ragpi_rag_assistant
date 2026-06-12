@@ -138,6 +138,29 @@ class DocumentStore:
         data.setdefault("documents", []).append(doc)
         self._write(data)
         return doc
+    
+
+    def update_file_hash(
+        self,
+        document_id: str,
+        content_hash: str,
+        file_size_bytes: int,
+    ) -> dict | None:
+        data = self._read()
+
+        for doc in data.get("documents", []):
+            if doc.get("document_id") == document_id:
+                doc["content_hash"] = content_hash
+                doc["file_size_bytes"] = file_size_bytes
+                doc["status"] = "uploaded"
+                doc["chunks_count"] = 0
+                doc["indexed_at"] = None
+                doc["error"] = None
+
+                self._write(data)
+                return doc
+
+        return None
 
     def mark_indexed(self, document_id: str, chunks_count: int) -> None:
         data = self._read()

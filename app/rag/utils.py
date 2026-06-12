@@ -7,7 +7,7 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 from pypdf import PdfReader
 
-SUPPORTED_EXTENSIONS = {".txt", ".md", ".html", ".htm", ".pdf"}
+SUPPORTED_EXTENSIONS = {".txt", ".md", ".html", ".htm", ".pdf", ".tex"}
 
 
 def list_files(raw_dir: str) -> list[str]:
@@ -33,7 +33,12 @@ def read_text(path: str) -> str:
         return soup.get_text("\n")
     if ext == ".pdf":
         reader = PdfReader(path)
-        return "\n".join(page.extract_text() or "" for page in reader.pages)
+        pages = []
+        for page in reader.pages:
+            text = page.extract_text() or ""
+            pages.append(text)
+        return "\n".join(pages)
+
     raise ValueError(f"Unsupported file type: {ext}")
 
 

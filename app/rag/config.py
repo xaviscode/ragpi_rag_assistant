@@ -36,6 +36,8 @@ class Settings(BaseModel):
     chunk_size_chars: int = int(os.getenv("CHUNK_SIZE_CHARS", "800"))
     chunk_overlap_chars: int = int(os.getenv("CHUNK_OVERLAP_CHARS", "150"))
     chunk_source_prefix_enabled: bool = os.getenv("CHUNK_SOURCE_PREFIX_ENABLED", "TRUE").upper() == "TRUE"
+    max_evidence_chars: int = int(os.getenv("MAX_EVIDENCE_CHARS", "5000"))
+    max_evidence_items: int = int(os.getenv("MAX_EVIDENCE_ITEMS", "10"))
 
     max_documents: int = int(os.getenv("MAX_DOCUMENTS", "50"))
     max_upload_size_mb: int = int(os.getenv("MAX_UPLOAD_SIZE_MB", "25"))
@@ -48,4 +50,11 @@ class Settings(BaseModel):
     collection_name: str = os.getenv("COLLECTION_NAME", "docs")
     anonymized_telemetry: bool = os.getenv("ANONYMIZED_TELEMETRY", "FALSE").upper() == "TRUE"
 
-    supported_extensions: tuple[str, ...] = (".txt", ".md", ".html", ".htm", ".pdf")
+    supported_extensions: tuple[str, ...] = (".txt", ".md", ".html", ".htm", ".pdf", ".tex")
+
+    reranker_enabled: bool = os.getenv("RERANKER_ENABLED", "FALSE").upper() == "TRUE"
+    reranker_model: str = os.getenv(
+        "RERANKER_MODEL",
+        "cross-encoder/ms-marco-MiniLM-L-6-v2",
+    )
+    rerank_top_n: int = int(os.getenv("RERANK_TOP_N", "15"))
