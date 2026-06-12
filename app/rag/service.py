@@ -12,6 +12,7 @@ from app.rag.llm import LocalLLM
 from app.rag.prompts import build_prompt_parts
 from app.rag.retrieve import retrieve
 from app.rag.vector_store import VectorStore
+from app.rag.reranker import Reranker
 
 
 class RagService:
@@ -32,6 +33,14 @@ class RagService:
             settings.ollama_base_url,
             settings.ollama_timeout,
             settings.ollama_keep_alive,
+        )
+        self.reranker = (
+            Reranker(
+                model_name=self.settings.reranker_model,
+                cache_dir=self.settings.hf_home,
+            )
+            if self.settings.reranker_enabled
+            else None
         )
 
     def health(self) -> dict[str, Any]:
@@ -122,17 +131,25 @@ Hypothetical answer:'''
 
     def debug_retrieve(self, question: str, document_ids: list[str] | None = None) -> dict[str, Any]:
         query_text = self._expand_query_with_hyde(question)
-        r = retrieve(self.settings, self.store, self.embedder, question, document_ids, query_text)
+        r = retrieve(self.settings, self.store, self.embedder, question, document_ids, query_text,)
+        retrieved_items = r["items"]
+        if self.reranker is not None:
+            retrieved_items = self.reranker.rerank(
+                query=question,
+                items=retrieved_items,
+                top_k=min(self.settings.rerank_top_n, len(retrieved_items)),
+            )
         items = [
             {
                 "source": it.get("source", "unknown"),
                 "document_id": it.get("document_id"),
                 "chunk_index": it.get("chunk_index"),
                 "distance": it.get("distance"),
+                "rerank_score": it.get("rerank_score"),
                 "chunk_id": it.get("chunk_id"),
                 "preview": (it.get("text") or "")[:500],
             }
-            for it in r["items"]
+            for it in retrieved_items
         ]
         return {
             "question": question,
@@ -142,6 +159,8 @@ Hypothetical answer:'''
             "distance_threshold": self.settings.distance_threshold,
             "mmr_enabled": self.settings.mmr_enabled,
             "hyde_enabled": self.settings.hyde_enabled,
+            "reranker_enabled": self.settings.reranker_enabled,
+            "reranker_model": self.settings.reranker_model if self.settings.reranker_enabled else None,
             "raw_candidates": r.get("raw_candidates"),
             "filtered_candidates": r.get("filtered_candidates"),
             "document_ids": document_ids,
@@ -171,13 +190,22 @@ Answer:'''
         query_text = self._expand_query_with_hyde(question)
         r = retrieve(self.settings, self.store, self.embedder, question, document_ids, query_text)
         items = r["items"]
+        if self.reranker is not None:
+            items = self.reranker.rerank(
+                query=question,
+                items=items,
+                top_k=min(self.settings.rerank_top_n, len(items)),
+            )
         ev = select_evidence(
-            question,
-            items,
-            self.embedder.embed_query,
-            self.embedder.embed_texts,
-            max_evidence=10,
-            max_total_chars=min(self.settings.max_context_chars, 5000),
+            question=question,
+            retrieved_items=items,
+            embed_query_fn=self.embedder.embed_query,
+            embed_texts_fn=self.embedder.embed_texts,
+            max_evidence=self.settings.max_evidence_items,
+            max_total_chars=min(
+                self.settings.max_context_chars,
+                self.settings.max_evidence_chars,
+            ),
         )
         evidence_text = (ev.get("evidence_text") or "").strip()
         if not evidence_text:
