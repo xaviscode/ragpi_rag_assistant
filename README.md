@@ -2,78 +2,59 @@
 
 A local **Retrieval-Augmented Generation (RAG)** assistant built with **FastAPI**, **ChromaDB**, **SentenceTransformers**, and **Ollama**.
 
-The project lets you place or upload documents, ingest them into a local vector database, and ask questions that are answered using only the indexed document evidence.
-
-The goal is to provide a lightweight local API for document-grounded question answering, with source tracking, evidence extraction, and configurable retrieval behavior.
+RagPi lets you index local documents, ask questions over them, and receive answers grounded only in retrieved document evidence. It is designed as a lightweight local API for document-grounded question answering, with source tracking, evidence extraction, document management, configurable retrieval, and local LLM generation.
 
 ---
 
-## What it does
+## Overview
 
-RagPi provides a local API that can:
+RagPi provides a local RAG pipeline that can ingest documents, split them into sentence-aware chunks, embed them with a SentenceTransformers model, store them in ChromaDB, retrieve relevant evidence for a question, and generate a grounded answer through Ollama.
 
-- Register and manage a local document collection.
-- Ingest documents from `data/raw`.
-- Split documents into sentence-aware chunks.
-- Embed chunks with a configurable SentenceTransformers model.
-- Store chunks and metadata in ChromaDB.
-- Retrieve relevant chunks for a user question.
-- Optionally diversify retrieved chunks with MMR-style selection.
-- Optionally use HyDE query expansion.
-- Generate grounded answers through a local Ollama model.
-- Return sources and evidence used to answer.
-- Refuse unsupported answers when evidence is insufficient.
+The project focuses on reproducibility, transparency and practical local use. It is especially useful for exploring personal, academic and technical documents without relying on external hosted LLM APIs.
 
 ---
 
 ## Main features
 
-### Document management
+RagPi supports document upload, local-folder ingestion, document listing, deletion, filtered querying by document ID, source return, evidence return and grounded refusal when evidence is insufficient.
 
-- Supports up to 50 managed documents by default.
-- Stores raw files locally under `data/raw`.
-- Stores a document registry in `data/metadata/documents.json`.
-- Tracks document metadata:
-  - `document_id`
-  - `filename`
-  - `original_filename`
-  - `content_hash`
-  - `status`
-  - `chunks_count`
-  - `created_at`
-  - `indexed_at`
-  - `error`
-- Detects duplicate documents using SHA-256 hashes.
-- Supports document upload, listing, ingestion, deletion, and filtered querying.
+The ingestion pipeline supports `.pdf`, `.txt`, `.md`, `.html`, `.htm` and `.tex` files. It detects duplicate documents using SHA-256 hashes and also detects edited files during re-ingestion. When a file changes, RagPi updates its metadata, removes stale Chroma chunks and re-indexes the new content.
 
-### Ingestion
+Retrieval is configurable through `TOP_K`, `FETCH_K`, optional distance filtering, MMR-style diversification, optional HyDE query expansion and optional cross-encoder reranking. The default embedding model is `BAAI/bge-base-en-v1.5`, with the recommended BGE query prefix supported through configuration.
 
-- Reads files from `/data/raw`.
-- Supports `.pdf`, `.txt`, `.md`, `.html`, and `.htm`.
-- Uses sentence-aware chunking instead of blind character splitting.
-- Adds an optional source prefix to chunks before embedding.
-- Creates deterministic chunk IDs: `document_id::chunk::chunk_index`.
-- Stores chunk-level metadata in Chroma.
-- Ingestion is idempotent: running `/ingest` multiple times does not duplicate chunks.
+Generation uses Ollama locally. The Ollama integration uses the chat API with separate system and user messages. For Qwen3-style models, thinking mode is disabled during normal RAG answers to avoid empty responses caused by the model spending the full token budget on internal reasoning.
 
-### Retrieval
+---
 
-The project includes improved retrieval behavior:
+## Architecture
 
-- Configurable `TOP_K`.
-- Configurable `FETCH_K`.
-- Optional distance threshold filtering.
-- MMR-style candidate diversification.
-- Optional HyDE query expansion.
-- Source and evidence return.
-- Document-specific filtering using `document_ids`.
-
-### Generation
-
-- Uses Ollama as the local LLM backend.
-- Answers only from retrieved evidence.
-- Returns `I don't know based on the provided documents.` when evidence is insufficient.
-- Includes an empty-answer guard and retry prompt to avoid blank model responses.
+```text
+User
+  ↓
+FastAPI API
+  ↓
+Document registry
+  ↓
+Ingestion pipeline
+  ↓
+Sentence-aware chunking
+  ↓
+SentenceTransformers embeddings
+  ↓
+ChromaDB vector store
+  ↓
+Retriever
+  ↓
+Optional MMR / reranking
+  ↓
+Evidence selector
+  ↓
+Prompt builder
+  ↓
+Ollama LLM
+  ↓
+Answer + sources + evidence
+```
 
 ---
 
@@ -95,6 +76,7 @@ The project includes improved retrieval behavior:
 │       ├── ingest.py
 │       ├── llm.py
 │       ├── prompts.py
+│       ├── reranker.py
 │       ├── retrieve.py
 │       ├── schemas.py
 │       ├── service.py
@@ -105,9 +87,16 @@ The project includes improved retrieval behavior:
 │   ├── chroma/
 │   ├── metadata/
 │   └── hf_cache/
+├── eval/
+│   ├── EVALUATION.md
+│   ├── questions.json
+│   ├── run_eval.py
+│   └── results/
+├── tests/
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
+├── pytest.ini
 ├── .env.example
 ├── .gitignore
 └── README.md
@@ -115,83 +104,52 @@ The project includes improved retrieval behavior:
 
 ---
 
-## Architecture
-
-```text
-User
-  ↓
-FastAPI API
-  ↓
-Document store
-  ↓
-Ingestion pipeline
-  ↓
-Sentence-aware chunking
-  ↓
-SentenceTransformers embeddings
-  ↓
-ChromaDB vector store
-  ↓
-Retriever
-  ↓
-Evidence selector
-  ↓
-Prompt builder
-  ↓
-Ollama LLM
-  ↓
-Answer + sources + evidence
-```
-
----
-
 ## Requirements
 
-- Docker
-- Docker Compose
-- Ollama running on the host machine
-- A local Ollama model, for example:
+You need Docker, Docker Compose and Ollama running on the host machine.
+
+Pull a local Ollama model before starting the API:
 
 ```bash
 ollama pull qwen2.5:7b-instruct
 ```
 
-Internet access is only needed when downloading models for the first time.
+You can also use Qwen3 models. RagPi disables thinking mode for normal RAG answers when using the Ollama chat API.
+
+Internet access is only required when downloading models or Python packages for the first time.
 
 ---
 
 ## Quick start
 
-### 1. Create local data folders
+Create the local data folders:
 
 ```bash
 mkdir -p data/raw data/chroma data/metadata data/hf_cache
 ```
 
-### 2. Create `.env`
+Create your local environment file:
 
 ```bash
 cp .env.example .env
 ```
 
-### 3. Start Ollama
-
-Make sure Ollama is running locally:
+Make sure Ollama is running:
 
 ```bash
 curl http://localhost:11434/api/tags
 ```
 
-Test the model:
-
-```bash
-ollama run qwen2.5:7b-instruct "Say hello in one sentence."
-```
-
-### 4. Start the API
+Start the API:
 
 ```bash
 docker compose up -d --build
+```
+
+Check health:
+
+```bash
+curl http://localhost:8000/health
 ```
 
 The API runs at:
@@ -200,195 +158,11 @@ The API runs at:
 http://localhost:8000
 ```
 
-### 5. Check health
-
-```bash
-curl http://localhost:8000/health
-```
-
-Example response:
-
-```json
-{
-  "status": "ok",
-  "collection_name": "docs",
-  "doc_chunks": 0,
-  "documents": 0,
-  "max_documents": 50
-}
-```
-
 ---
 
-## Docker Compose
+## Add and ingest documents
 
-The project uses a single service:
-
-```yaml
-services:
-  ragpi:
-    build: .
-    container_name: ragpi
-    ports:
-      - "8000:8000"
-    env_file:
-      - .env
-    volumes:
-      - ./data:/data
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
-    restart: unless-stopped
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-```
-
-The volume mount:
-
-```yaml
-volumes:
-  - ./data:/data
-```
-
-maps local project storage to the container:
-
-```text
-Container path        Local path
-/data/raw       ->    ./data/raw
-/data/chroma    ->    ./data/chroma
-/data/metadata  ->    ./data/metadata
-/data/hf_cache  ->    ./data/hf_cache
-```
-
-This makes documents, Chroma data, metadata, and model cache persistent across container restarts.
-
----
-
-## Environment variables
-
-Example `.env`:
-
-```dotenv
-# Protect admin endpoints such as ingest, upload and delete.
-# Leave empty for local development.
-API_KEY=
-
-# LLM through Ollama running on the host
-LLM_BACKEND=ollama
-OLLAMA_BASE_URL=http://host.docker.internal:11434
-LLM_MODEL=qwen2.5:7b-instruct
-OLLAMA_KEEP_ALIVE=10m
-OLLAMA_TIMEOUT=120
-
-# Embeddings
-EMBEDDING_BACKEND=sentence-transformers
-EMBEDDING_MODEL=BAAI/bge-base-en-v1.5
-EMBEDDING_QUERY_PREFIX=
-EMBEDDING_DOCUMENT_PREFIX=
-
-# Retrieval and generation
-TOP_K=15
-FETCH_K=50
-MAX_NEW_TOKENS=450
-MAX_CONTEXT_CHARS=12000
-TEMPERATURE=0.0
-
-# Retrieval quality controls
-DISTANCE_THRESHOLD=
-MMR_ENABLED=TRUE
-MMR_LAMBDA=0.65
-HYDE_ENABLED=FALSE
-HYDE_MAX_TOKENS=120
-MIN_ANSWER_CHARS=1
-
-# Chunking
-CHUNK_SIZE_CHARS=800
-CHUNK_OVERLAP_CHARS=150
-CHUNK_SOURCE_PREFIX_ENABLED=TRUE
-
-# Document limits
-MAX_DOCUMENTS=50
-MAX_UPLOAD_SIZE_MB=25
-
-# Storage inside the container
-RAW_DIR=/data/raw
-CHROMA_DIR=/data/chroma
-METADATA_DIR=/data/metadata
-DOCUMENTS_REGISTRY_PATH=/data/metadata/documents.json
-HF_HOME=/data/hf_cache
-COLLECTION_NAME=docs
-ANONYMIZED_TELEMETRY=FALSE
-```
-
----
-
-## Important configuration notes
-
-### Embedding model
-
-The default improved embedding model is:
-
-```dotenv
-EMBEDDING_MODEL=BAAI/bge-base-en-v1.5
-```
-
-After changing the embedding model, rebuild the vector index because existing Chroma vectors were created with the previous embedding model.
-
-### Retrieval depth
-
-```dotenv
-TOP_K=15
-FETCH_K=50
-```
-
-`FETCH_K` retrieves more candidates first. The system can then filter and diversify candidates before selecting the final `TOP_K`.
-
-### Distance threshold
-
-```dotenv
-DISTANCE_THRESHOLD=
-```
-
-By default this is empty, meaning no hard threshold is applied.
-
-You can tune it later after inspecting `/debug/retrieve` distances. A threshold that is too strict may remove useful chunks.
-
-### MMR-style diversification
-
-```dotenv
-MMR_ENABLED=TRUE
-MMR_LAMBDA=0.65
-```
-
-This reduces repeated or overly similar chunks in the final context.
-
-### HyDE query expansion
-
-```dotenv
-HYDE_ENABLED=FALSE
-```
-
-HyDE is optional. When enabled, the LLM generates a short hypothetical answer to improve the retrieval query. It can help semantic retrieval, but it adds one extra LLM call per query.
-
-Recommended initial setting:
-
-```dotenv
-HYDE_ENABLED=FALSE
-```
-
-Enable it only after baseline retrieval has been tested.
-
----
-
-## Add documents
-
-### Option A: add files manually
-
-Place files in:
-
-```text
-data/raw
-```
-
-Example:
+Place files in `data/raw`:
 
 ```bash
 cp your_file.pdf data/raw/
@@ -400,91 +174,27 @@ Then ingest:
 curl -X POST http://localhost:8000/ingest
 ```
 
-### Option B: upload files through the API
+If `API_KEY` is configured:
 
 ```bash
-curl -X POST "http://localhost:8000/documents" -F "files=@your_file.pdf"
+curl -X POST http://localhost:8000/ingest \
+  -H "X-API-Key: your_key_here"
 ```
 
-If `API_KEY` is set:
+You can also upload through the API:
 
 ```bash
-curl -X POST "http://localhost:8000/documents" -H "X-API-Key: your_key_here" -F "files=@your_file.pdf"
+curl -X POST http://localhost:8000/documents \
+  -F "files=@your_file.pdf"
 ```
 
----
+Supported formats:
 
-## Ingest documents
-
-```bash
-curl -X POST http://localhost:8000/ingest
+```text
+.pdf, .txt, .md, .html, .htm, .tex
 ```
 
-If `API_KEY` is set:
-
-```bash
-curl -X POST http://localhost:8000/ingest -H "X-API-Key: your_key_here"
-```
-
-Example first ingestion response:
-
-```json
-{
-  "files_seen": 6,
-  "files_processed": 6,
-  "files_skipped": 0,
-  "files_failed": 0,
-  "added_chunks": 98,
-  "results": []
-}
-```
-
-Example second ingestion response:
-
-```json
-{
-  "files_seen": 6,
-  "files_processed": 0,
-  "files_skipped": 6,
-  "files_failed": 0,
-  "added_chunks": 0,
-  "results": []
-}
-```
-
-The second response confirms idempotency.
-
----
-
-## List documents
-
-```bash
-curl http://localhost:8000/documents
-```
-
-Example response:
-
-```json
-{
-  "documents": [
-    {
-      "document_id": "uuid",
-      "filename": "document.pdf",
-      "original_filename": "document.pdf",
-      "relative_path": "document.pdf",
-      "extension": ".pdf",
-      "file_size_bytes": 123456,
-      "status": "indexed",
-      "chunks_count": 12,
-      "created_at": "...",
-      "indexed_at": "...",
-      "error": null
-    }
-  ],
-  "count": 1,
-  "max_documents": 50
-}
-```
+Ingestion is idempotent. Running it repeatedly does not duplicate chunks. If a previously indexed file changes, RagPi detects the new hash, removes stale chunks and re-indexes the updated file.
 
 ---
 
@@ -493,150 +203,161 @@ Example response:
 Ask a question over all indexed documents:
 
 ```bash
-curl -X POST http://localhost:8000/query -H "Content-Type: application/json" -d '{
+curl -X POST http://localhost:8000/query \
+  -H "Content-Type: application/json" \
+  -d '{
     "question": "What is this document about?",
     "return_sources": true,
     "return_evidence": true
   }'
 ```
 
-Response:
-
-```json
-{
-  "answer": "...",
-  "sources": [
-    {
-      "source": "document.pdf",
-      "chunk_id": "document_id::chunk::0",
-      "distance": 0.52,
-      "document_id": "document_id",
-      "chunk_index": 0
-    }
-  ],
-  "evidence": [
-    {
-      "source": "document.pdf",
-      "chunk_id": "document_id::chunk::0",
-      "quote": "Relevant evidence quote..."
-    }
-  ]
-}
-```
-
----
-
-## Query selected documents
-
-Use `document_ids` to restrict retrieval to specific documents:
+Restrict retrieval to specific documents:
 
 ```bash
-curl -X POST http://localhost:8000/query -H "Content-Type: application/json" -d '{
-    "question": "What does this document say about the job position?",
+curl -X POST http://localhost:8000/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "What does this document say about the methodology?",
     "document_ids": ["your-document-id"],
     "return_sources": true,
     "return_evidence": true
   }'
 ```
 
+A typical response contains an answer, sources and evidence snippets.
+
 ---
 
-## Debug retrieval
+## Document management
 
-Use `/debug/retrieve` to inspect retrieval before LLM generation:
+List indexed documents:
 
 ```bash
-curl -X POST http://localhost:8000/debug/retrieve -H "Content-Type: application/json" -d '{
-    "question": "To what job position have I applied at Nexthink?"
-  }'
+curl http://localhost:8000/documents
 ```
 
-The response includes:
-
-```text
-query_text
-top_k
-fetch_k
-distance_threshold
-mmr_enabled
-hyde_enabled
-raw_candidates
-filtered_candidates
-items
-```
-
-This endpoint is used to make a diagnosing whether failures come from retrieval or generation.
-
----
-
-## Delete a document
+Delete a document:
 
 ```bash
 curl -X DELETE http://localhost:8000/documents/your-document-id
 ```
 
-If `API_KEY` is set:
+If `API_KEY` is configured:
 
 ```bash
-curl -X DELETE http://localhost:8000/documents/your-document-id -H "X-API-Key: your_key_here"
+curl -X DELETE http://localhost:8000/documents/your-document-id \
+  -H "X-API-Key: your_key_here"
 ```
 
-Deletion removes:
+Deletion removes the registry entry, the raw file and the document’s chunks from ChromaDB.
 
-```text
-- The document registry entry.
-- The physical file from data/raw.
-- The document chunks from Chroma.
+---
+
+## Debug retrieval
+
+Use `/debug/retrieve` to inspect retrieval before generation:
+
+```bash
+curl -X POST http://localhost:8000/debug/retrieve \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your_key_here" \
+  -d '{
+    "question": "What are the main findings?"
+  }'
 ```
+
+The debug response includes retrieval settings, candidate counts, retrieved chunk previews, distances and rerank scores when reranking is enabled.
+
+When `API_KEY` is set, `/debug/retrieve` is protected because it can expose chunk previews and retrieval internals.
+
+---
+
+## Retrieval tuning
+
+`FETCH_K` controls how many candidates are retrieved before filtering and diversification. `TOP_K` controls how many final chunks are used as context.
+
+```dotenv
+TOP_K=15
+FETCH_K=50
+```
+
+MMR reduces repeated or overly similar chunks:
+
+```dotenv
+MMR_ENABLED=TRUE
+MMR_LAMBDA=0.65
+```
+
+HyDE can improve semantic retrieval by generating a short hypothetical answer before retrieval, but it adds one extra LLM call:
+
+```dotenv
+HYDE_ENABLED=FALSE
+```
+
+Cross-encoder reranking can improve ordering when dense retrieval returns relevant but imperfectly ranked chunks:
+
+```dotenv
+RERANKER_ENABLED=TRUE
+RERANKER_MODEL=cross-encoder/ms-marco-MiniLM-L-6-v2
+RERANK_TOP_N=15
+```
+
+Reranking is disabled by default because it loads an additional model and increases latency.
 
 ---
 
 ## Reset and re-index
 
-When changing any of these settings:
+Rebuild the vector index whenever embedding or chunking settings change:
 
 ```text
 EMBEDDING_MODEL
+EMBEDDING_QUERY_PREFIX
+EMBEDDING_DOCUMENT_PREFIX
 CHUNK_SIZE_CHARS
 CHUNK_OVERLAP_CHARS
 CHUNK_SOURCE_PREFIX_ENABLED
 ```
 
-rebuild the index:
+Reset:
 
 ```bash
 docker compose down
 rm -rf data/chroma data/metadata
-mkdir -p data/chroma data/metadata
 docker compose up -d --build
 curl -X POST http://localhost:8000/ingest
 ```
 
-This keeps raw files but recreates the document registry and Chroma vectors.
+Changing reranker settings does not require re-indexing because reranking happens after retrieval.
+
+---
+
+## Evaluation and tests
+
+RagPi includes unit/API tests and a lightweight local RAG evaluation suite.
+
+Run pytest:
+
+```bash
+python -m pytest -q
+```
+
+Run the RAG evaluation:
+
+```bash
+python eval/run_eval.py --save-results eval/results/latest.json
+```
+
+The evaluation calls the running `/query` endpoint and checks whether answers are grounded, sources and evidence are returned, unsupported questions are refused, numeric facts can be extracted and responses are not empty.
+
+The evaluation is local-first and does not use external LLM judges or paid APIs.
 
 ---
 
 ## Troubleshooting
 
-### `/debug/retrieve` works but `/query` fails
-
-This usually means retrieval is working but Ollama generation failed.
-
-Check Ollama:
-
-```bash
-curl http://localhost:11434/api/tags
-```
-
-Test the model:
-
-```bash
-ollama run qwen2.5:7b-instruct "Say hello."
-```
-
-### Docker cannot reach Ollama
-
-Make sure `docker-compose.yml` includes:
+If Docker cannot reach Ollama, make sure `docker-compose.yml` includes:
 
 ```yaml
 extra_hosts:
@@ -649,58 +370,25 @@ and `.env` contains:
 OLLAMA_BASE_URL=http://host.docker.internal:11434
 ```
 
-### Empty answers
+If `/debug/retrieve` works but `/query` fails, retrieval is probably working and the issue is generation. Check Ollama directly:
 
-The current code includes a guard for empty LLM responses. If Ollama returns blank text, the system retries with a simpler prompt and then falls back to:
-
-```text
-I don't know based on the provided documents.
+```bash
+curl http://localhost:11434/api/tags
 ```
 
-### Irrelevant chunks are retrieved
+If answers are irrelevant, inspect `/debug/retrieve` and tune `TOP_K`, `FETCH_K`, MMR, HyDE or reranking. Avoid setting a strict `DISTANCE_THRESHOLD` until you have inspected actual distances.
 
-Use `/debug/retrieve` to inspect distances and retrieved chunks.
-
-Possible tuning options:
-
-```dotenv
-TOP_K=10
-FETCH_K=40
-MMR_ENABLED=TRUE
-DISTANCE_THRESHOLD=
-HYDE_ENABLED=FALSE
-```
-
-Do not set a strict `DISTANCE_THRESHOLD` until you inspect actual retrieval distances.
+If you remove documents manually from `data/raw`, reset `data/chroma` and `data/metadata` before re-ingesting so stale vectors do not remain.
 
 ---
 
 ## Current limitations
 
-This project is optimized for local document-grounded Q&A, but some tasks remain harder than others.
+RagPi works best for semantic questions, document-specific facts, methodology questions, summaries, evidence-backed answers and filtered queries over selected documents.
 
-Works well for:
+Exact-value extraction can still be harder for phone numbers, emails, URLs, identifiers and similar values. These cases may benefit from a future hybrid retrieval layer combining dense retrieval with lexical or pattern-based search.
 
-```text
-- Semantic questions
-- Role extraction from cover letters
-- Document-specific facts
-- Evidence-backed answers
-- Document filtering by ID
-- Collection-wide aggregation
-- Dates
-```
-
-Can be weaker for:
-
-```text
-- Exact phone numbers
-- Emails
-- IDs
-- URLs
-```
-
-These exact-value tasks may require future work.
+This project is intended as a local document-grounded RAG assistant and learning project. It is not a production authentication system, hosted document platform or formal benchmark.
 
 ---
 
@@ -708,13 +396,9 @@ These exact-value tasks may require future work.
 
 For local development, `API_KEY` can be empty.
 
-If exposing the API beyond localhost:
+Before exposing the API beyond localhost, configure `API_KEY`, restrict CORS origins, avoid exposing personal documents publicly, and consider adding rate limiting or an authentication proxy.
 
-- Set `API_KEY`.
-- Require `X-API-Key` for upload, ingestion and deletion.
-- Restrict CORS origins.
-- Add rate limiting or an authentication proxy.
-- Avoid exposing raw personal documents publicly.
+Admin and write operations should remain protected. Debug retrieval should also be protected because it can expose retrieved document previews.
 
 ---
 
@@ -726,6 +410,6 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## Credits
 
-This project was created as a practical local RAG assistant for working with personal and academic documents. It was especially useful for exploring large, dense, and technical files by making it easier to ask grounded questions, retrieve relevant evidence, and study complex material more efficiently.
+This project was created as a practical local RAG assistant for working with personal and academic documents. It was especially useful for exploring large, dense and technical files by making it easier to ask grounded questions, retrieve relevant evidence and study complex material more efficiently.
 
-Beyond being a software project, RagPi served as a hands-on learning experience in document ingestion, vector search, local LLMs, retrieval quality, evidence grounding, and API-based system design.
+Beyond being a software project, RagPi served as a hands-on learning experience in document ingestion, vector search, local LLMs, retrieval quality, evidence grounding, API design and evaluation.
