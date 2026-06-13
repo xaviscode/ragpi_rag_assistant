@@ -131,14 +131,17 @@ Hypothetical answer:'''
 
     def debug_retrieve(self, question: str, document_ids: list[str] | None = None) -> dict[str, Any]:
         query_text = self._expand_query_with_hyde(question)
-        r = retrieve(self.settings, self.store, self.embedder, question, document_ids, query_text,)
+        r = retrieve(
+            self.settings,
+            self.store,
+            self.embedder,
+            question,
+            document_ids,
+            query_text,
+            self.reranker,
+        )
+
         retrieved_items = r["items"]
-        if self.reranker is not None:
-            retrieved_items = self.reranker.rerank(
-                query=question,
-                items=retrieved_items,
-                top_k=min(self.settings.rerank_top_n, len(retrieved_items)),
-            )
         items = [
             {
                 "source": it.get("source", "unknown"),
@@ -163,6 +166,7 @@ Hypothetical answer:'''
             "reranker_model": self.settings.reranker_model if self.settings.reranker_enabled else None,
             "raw_candidates": r.get("raw_candidates"),
             "filtered_candidates": r.get("filtered_candidates"),
+            "reranked_candidates": r.get("reranked_candidates"),
             "document_ids": document_ids,
             "items": items,
         }
@@ -188,14 +192,17 @@ Answer:'''
 
     def answer(self, question: str, return_sources: bool = False, return_evidence: bool = True, document_ids: list[str] | None = None) -> dict[str, Any]:
         query_text = self._expand_query_with_hyde(question)
-        r = retrieve(self.settings, self.store, self.embedder, question, document_ids, query_text)
+        r = retrieve(
+            self.settings,
+            self.store,
+            self.embedder,
+            question,
+            document_ids,
+            query_text,
+            self.reranker,
+        )
+
         items = r["items"]
-        if self.reranker is not None:
-            items = self.reranker.rerank(
-                query=question,
-                items=items,
-                top_k=min(self.settings.rerank_top_n, len(items)),
-            )
         ev = select_evidence(
             question=question,
             retrieved_items=items,
