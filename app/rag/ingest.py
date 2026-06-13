@@ -40,11 +40,14 @@ def ingest_folder(settings: Settings, store: VectorStore, embedder: Embedder, do
             file_changed = bool(stored_hash and current_hash != stored_hash)
 
             if file_changed:
-                document_store.update_file_hash(
+                updated_doc = document_store.update_file_hash(
                     document_id=document_id,
                     content_hash=current_hash,
                     file_size_bytes=os.path.getsize(path),
                 )
+                if updated_doc:
+                    doc = updated_doc
+
                 store.delete_by_document_id(document_id)
 
             if doc.get("status") == "indexed" and doc.get("chunks_count", 0) > 0 and not file_changed:
